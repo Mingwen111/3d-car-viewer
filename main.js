@@ -146,17 +146,22 @@ function setDefaultView(cameraZ, center, size) {
 
 // 自定义缓动函数，实现开始加速、中间匀速、结束减速的效果
 function customEasing(x) {
-    if (x < 0.05) { // 0-0.05s 加速
-        return x * x * 20; // 调整系数以适应新的时间
-    } else if (x > 0.95) { // 0.95-1s 减速
-        const t = (x - 0.95) * 20;
-        return 1 - (1 - t) * (1 - t);
+    // 前100ms加速（0-0.05）
+    if (x < 0.05) {
+        // 使用二次方曲线实现加速
+        return (x / 0.05) * (x / 0.05) * 0.05;
     }
-    // 中间匀速
+    // 后100ms减速（0.95-1.0）
+    if (x > 0.95) {
+        // 使用二次方曲线实现减速
+        const t = (1 - x) / 0.05;
+        return 1 - (t * t * 0.05);
+    }
+    // 中间1800ms匀速（0.05-0.95）
     return x;
 }
 
-function animateCamera(targetPosition, targetLookAt, duration = 1000) { // 改为1000ms
+function animateCamera(targetPosition, targetLookAt, duration = 2000) {
     const startPosition = camera.position.clone();
     const startRotation = camera.quaternion.clone();
     
