@@ -166,4 +166,4 @@ document.getElementById('stopGif').addEventListener('click', function() {
     gif.render();
 });
 
-init(); 
+init();
