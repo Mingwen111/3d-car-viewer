@@ -38,14 +38,24 @@ function initScene(canvas) {
     controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.rotateSpeed = 0.5;
-    controls.zoomSpeed = 1.2;
+    controls.rotateSpeed = 0.8;
+    controls.zoomSpeed = 1.0;
     controls.panSpeed = 0.8;
     controls.screenSpacePanning = false;
-    controls.minDistance = 2;
-    controls.maxDistance = 20;
+    controls.minDistance = 3;
+    controls.maxDistance = 15;
     controls.maxPolarAngle = Math.PI / 1.5;
+    controls.minPolarAngle = Math.PI / 6;
     controls.enablePan = false;
+    controls.mouseButtons = {
+        RIGHT: THREE.MOUSE.ROTATE,
+        MIDDLE: THREE.MOUSE.DOLLY,
+        LEFT: null
+    };
+    controls.touches = {
+        ONE: THREE.TOUCH.ROTATE,
+        TWO: THREE.TOUCH.DOLLY_PAN
+    };
 
     setupLights();
 }
@@ -134,7 +144,19 @@ function setDefaultView(cameraZ, center, size) {
     controls.update();
 }
 
-function animateCamera(targetPosition, targetLookAt, duration = 400) {
+// 自定义缓动函数，实现开始加速、中间匀速、结束减速的效果
+function customEasing(x) {
+    if (x < 0.167) { // 0-0.05s 加速
+        return x * x * 6;
+    } else if (x > 0.833) { // 0.25-0.3s 减速
+        const t = (x - 0.833) * 6;
+        return 1 - (1 - t) * (1 - t);
+    }
+    // 中间匀速
+    return x;
+}
+
+function animateCamera(targetPosition, targetLookAt, duration = 300) { // 改为300ms
     const startPosition = camera.position.clone();
     const startRotation = camera.quaternion.clone();
     
@@ -149,7 +171,7 @@ function animateCamera(targetPosition, targetLookAt, duration = 400) {
         const currentTime = performance.now();
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        const easeProgress = easeOutCubic(progress);
+        const easeProgress = customEasing(progress);
 
         camera.position.lerpVectors(startPosition, targetPosition, easeProgress);
         camera.quaternion.slerpQuaternions(startRotation, targetRotation, easeProgress);
@@ -163,10 +185,6 @@ function animateCamera(targetPosition, targetLookAt, duration = 400) {
     }
 
     update();
-}
-
-function easeOutCubic(x) {
-    return 1 - Math.pow(1 - x, 3);
 }
 
 function setTopView(size) {
@@ -184,9 +202,9 @@ function setSideView(size) {
 }
 
 function setDriverView(size) {
-    const targetPosition = new THREE.Vector3(0, size.y * 2.5, 0);
-    const targetLookAt = new THREE.Vector3(0, 0, 0);
-    camera.up.set(0, 0, 1);
+    const targetPosition = new THREE.Vector3(0, size.y * 2.5, -size.z * 0.5);
+    const targetLookAt = new THREE.Vector3(0, 0, size.z * 0.5);
+    camera.up.set(0, 1, 0);
     animateCamera(targetPosition, targetLookAt);
 }
 
