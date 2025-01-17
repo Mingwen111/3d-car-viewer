@@ -35,9 +35,8 @@ function init() {
 
     // 加载模型
     const loadingElem = document.querySelector('#loading');
-    const loader = new GLTFLoader();
     
-    // 添加加载管理器
+    // 创建加载管理器
     const loadingManager = new THREE.LoadingManager();
     loadingManager.onProgress = (url, loaded, total) => {
         console.log(`正在加载: ${url}`);
@@ -49,11 +48,36 @@ function init() {
         loadingElem.textContent = '加载失败，请检查模型文件路径';
     };
 
-    loader.setManager(loadingManager);
+    // 设置纹理加载器的基础路径
+    loadingManager.setPath('./textures/');
+
+    // 使用加载管理器创建加载器
+    const loader = new GLTFLoader(loadingManager);
+
     loader.load(
-        './source/scene.glb',
+        './scene.glb',
         function (gltf) {
             console.log('模型加载成功:', gltf);
+            // 确保模型的材质能找到贴图
+            gltf.scene.traverse((child) => {
+                if (child.isMesh) {
+                    if (child.material) {
+                        // 更新贴图路径并设置编码
+                        if (child.material.map) {
+                            child.material.map.encoding = THREE.sRGBEncoding;
+                            // 确保贴图路径正确
+                            const mapPath = child.material.map.image.src;
+                            console.log('贴图路径:', mapPath);
+                        }
+                        if (child.material.normalMap) {
+                            child.material.normalMap.encoding = THREE.LinearEncoding;
+                        }
+                        // 启用阴影
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                    }
+                }
+            });
             model = gltf.scene;
             scene.add(model);
             
