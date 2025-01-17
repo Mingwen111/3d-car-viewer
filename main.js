@@ -18,9 +18,12 @@ function init() {
     // 创建渲染器
     renderer = new THREE.WebGLRenderer({
         canvas: document.querySelector('#canvas'),
-        preserveDrawingBuffer: true
+        preserveDrawingBuffer: true,
+        antialias: true
     });
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.shadowMap.enabled = true;
 
     // 添加轨道控制
     controls = new OrbitControls(camera, renderer.domElement);
@@ -31,50 +34,17 @@ function init() {
     scene.add(ambientLight);
     const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
     directionalLight.position.set(0, 1, 1);
+    directionalLight.castShadow = true;
     scene.add(directionalLight);
 
     // 加载模型
     const loadingElem = document.querySelector('#loading');
-    
-    // 创建加载管理器
-    const loadingManager = new THREE.LoadingManager();
-    loadingManager.onProgress = (url, loaded, total) => {
-        console.log(`正在加载: ${url}`);
-        console.log(`加载进度: ${(loaded / total * 100)}%`);
-    };
-    
-    loadingManager.onError = (url) => {
-        console.error('加载出错:', url);
-        loadingElem.textContent = '加载失败，请检查模型文件路径';
-    };
-
-    // 使用加载管理器创建加载器
-    const loader = new GLTFLoader(loadingManager);
+    const loader = new GLTFLoader();
 
     loader.load(
         './scene.glb',
         function (gltf) {
             console.log('模型加载成功:', gltf);
-            // 确保模型的材质能找到贴图
-            gltf.scene.traverse((child) => {
-                if (child.isMesh) {
-                    if (child.material) {
-                        // 更新贴图路径并设置编码
-                        if (child.material.map) {
-                            child.material.map.encoding = THREE.sRGBEncoding;
-                            // 确保贴图路径正确
-                            const mapPath = child.material.map.image.src;
-                            console.log('贴图路径:', mapPath);
-                        }
-                        if (child.material.normalMap) {
-                            child.material.normalMap.encoding = THREE.LinearEncoding;
-                        }
-                        // 启用阴影
-                        child.castShadow = true;
-                        child.receiveShadow = true;
-                    }
-                }
-            });
             model = gltf.scene;
             scene.add(model);
             
