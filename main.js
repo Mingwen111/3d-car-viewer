@@ -121,6 +121,10 @@ function loadModel(loadingElem) {
             loadingElem.textContent = '加载失败: ' + error.message;
         }
     );
+
+    // 添加环境贴图
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
 }
 
 // 视角控制函数
