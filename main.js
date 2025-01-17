@@ -184,8 +184,8 @@ function setSideView(size) {
 }
 
 function setDriverView(size) {
-    const targetPosition = new THREE.Vector3(0, size.y * 1.8, -size.z * 0.1);
-    const targetLookAt = new THREE.Vector3(0, size.y * 0.5, size.z * 2);
+    const targetPosition = new THREE.Vector3(0, size.y * 1.2, -size.z * 1.5);
+    const targetLookAt = new THREE.Vector3(0, 0, size.z * 2);
     camera.up.set(0, 1, 0);
     animateCamera(targetPosition, targetLookAt);
 }
