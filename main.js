@@ -48,9 +48,6 @@ function init() {
         loadingElem.textContent = '加载失败，请检查模型文件路径';
     };
 
-    // 设置纹理加载器的基础路径
-    loadingManager.setPath('./textures/');
-
     // 使用加载管理器创建加载器
     const loader = new GLTFLoader(loadingManager);
 
