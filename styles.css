@@ -12,6 +12,7 @@ body {
 #canvas {
     width: 100%;
     height: 100%;
+    background: radial-gradient(circle at center, #1a1a1a 0%, #000000 100%);
 }
 
 #controls {
@@ -20,20 +21,30 @@ body {
     left: 50%;
     transform: translateX(-50%);
     z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
 }
 
 button {
     padding: 10px 20px;
-    margin: 0 5px;
     font-size: 16px;
     cursor: pointer;
-    background: #ffffff;
-    border: 1px solid #cccccc;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 5px;
+    color: white;
+    transition: all 0.3s ease;
 }
 
 button:hover {
-    background: #f0f0f0;
+    background: rgba(255, 255, 255, 0.2);
 }
 
 #loading {
@@ -42,9 +53,9 @@ button:hover {
     left: 50%;
     transform: translate(-50%, -50%);
     font-size: 18px;
-    color: #333;
-    background: rgba(255, 255, 255, 0.8);
+    color: white;
+    background: rgba(0, 0, 0, 0.7);
     padding: 10px 20px;
     border-radius: 5px;
     z-index: 100;
-} 
+}
