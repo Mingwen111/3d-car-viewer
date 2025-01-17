@@ -134,7 +134,7 @@ function setDefaultView(cameraZ, center, size) {
     controls.update();
 }
 
-function animateCamera(targetPosition, targetLookAt, duration = 1000) {
+function animateCamera(targetPosition, targetLookAt, duration = 400) {
     const startPosition = camera.position.clone();
     const startRotation = camera.quaternion.clone();
     
@@ -149,7 +149,7 @@ function animateCamera(targetPosition, targetLookAt, duration = 1000) {
         const currentTime = performance.now();
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        const easeProgress = easeInOutCubic(progress);
+        const easeProgress = easeOutCubic(progress);
 
         camera.position.lerpVectors(startPosition, targetPosition, easeProgress);
         camera.quaternion.slerpQuaternions(startRotation, targetRotation, easeProgress);
@@ -165,8 +165,8 @@ function animateCamera(targetPosition, targetLookAt, duration = 1000) {
     update();
 }
 
-function easeInOutCubic(x) {
-    return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+function easeOutCubic(x) {
+    return 1 - Math.pow(1 - x, 3);
 }
 
 function setTopView(size) {
@@ -184,8 +184,8 @@ function setSideView(size) {
 }
 
 function setDriverView(size) {
-    const targetPosition = new THREE.Vector3(-size.x * 0.3, size.y * 0.8, size.z * 0.1);
-    const targetLookAt = new THREE.Vector3(size.x * 0.5, size.y * 0.7, -size.z);
+    const targetPosition = new THREE.Vector3(0, size.y * 1.8, -size.z * 0.1);
+    const targetLookAt = new THREE.Vector3(0, size.y * 0.5, size.z * 2);
     camera.up.set(0, 1, 0);
     animateCamera(targetPosition, targetLookAt);
 }
@@ -352,4 +352,4 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 开始动画循环
     animate();
-});
+}); 
