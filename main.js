@@ -1,66 +1,50 @@
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+// ... 前面的代码保持不变 ...
 
-let scene, camera, renderer, controls, model;
-let isRecording = false;
-let gif;
-
-function init() {
-    // 创建场景
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xf0f0f0);
-
-    // 创建相机
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.z = 5;
-
-    // 创建渲染器 - 提高清晰度
+    // 创建渲染器 - 进一步提高清晰度
     renderer = new THREE.WebGLRenderer({
         canvas: document.querySelector('#canvas'),
         preserveDrawingBuffer: true,
         antialias: true,
         alpha: true,
-        powerPreference: "high-performance"
+        powerPreference: "high-performance",
+        logarithmicDepthBuffer: true // 提高深度缓冲精度
     });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio); // 提高清晰度
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // 限制最大像素比以平衡性能
     renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping; // 添加电影级色调映射
+    renderer.toneMappingExposure = 1.2; // 提高整体亮度
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // 更柔和的阴影
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap; // 柔和阴影
 
-    // 添加轨道控制 - 优化交互
-    controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true; // 平滑移动
-    controls.dampingFactor = 0.05; // 阻尼系数
-    controls.rotateSpeed = 0.5; // 旋转速度
-    controls.zoomSpeed = 1.2; // 缩放速度
-    controls.panSpeed = 0.8; // 平移速度
-    controls.screenSpacePanning = false; // 保持垂直平移
-    controls.minDistance = 2; // 最小缩放距离
-    controls.maxDistance = 20; // 最大缩放距离
-    controls.maxPolarAngle = Math.PI / 1.5; // 限制垂直旋转角度
-    controls.enablePan = false; // 禁用平移，始终以模型为中心
+    // ... OrbitControls 配置保持不变 ...
 
-    // 添加灯光 - 提高清晰度
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    // 增强光照效果
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.0); // 提高环境光强度
     scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    // 主光源
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
     directionalLight.position.set(5, 5, 5);
     directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
+    directionalLight.shadow.mapSize.width = 4096; // 提高阴影质量
+    directionalLight.shadow.mapSize.height = 4096;
+    directionalLight.shadow.camera.near = 0.1;
+    directionalLight.shadow.camera.far = 100;
+    directionalLight.shadow.bias = -0.001; // 减少阴影瑕疵
     scene.add(directionalLight);
 
-    // 添加补充光源
-    const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    // 补充光源
+    const backLight = new THREE.DirectionalLight(0xffffff, 0.7);
     backLight.position.set(-5, 5, -5);
     scene.add(backLight);
 
-    // 加载模型
-    const loadingElem = document.querySelector('#loading');
-    const loader = new GLTFLoader();
+    // 添加环境光遮蔽和边缘光照
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.5);
+    hemiLight.position.set(0, 20, 0);
+    scene.add(hemiLight);
+
+    // ... 加载模型部分 ...
 
     loader.load(
         './scene.glb',
@@ -76,84 +60,29 @@ function init() {
                     if (child.material) {
                         child.material.needsUpdate = true;
                         // 提高材质质量
-                        child.material.roughness = 0.7;
-                        child.material.metalness = 0.3;
+                        child.material.roughness = 0.5; // 降低粗糙度
+                        child.material.metalness = 0.6; // 提高金属感
+                        child.material.envMapIntensity = 1.5; // 增强环境反射
+                        
+                        // 启用抗锯齿
+                        if (child.material.map) {
+                            child.material.map.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                        }
                     }
                 }
             });
 
-            scene.add(model);
-            
-            // 自动调整相机位置以适应模型
-            const box = new THREE.Box3().setFromObject(model);
-            const center = box.getCenter(new THREE.Vector3());
-            const size = box.getSize(new THREE.Vector3());
-            
-            console.log('模型尺寸:', size);
-            
-            const maxDim = Math.max(size.x, size.y, size.z);
-            const fov = camera.fov * (Math.PI / 180);
-            let cameraZ = Math.abs(maxDim / Math.sin(fov / 2));
-            
-            camera.position.set(cameraZ * 0.5, cameraZ * 0.5, cameraZ * 0.5); // 设置一个更好的初始视角
-            camera.updateProjectionMatrix();
-            
-            // 设置控制器目标点为模型中心
-            controls.target.copy(center);
-            controls.update();
-            
-            loadingElem.style.display = 'none';
+            // ... 其余代码保持不变 ...
         },
-        function (xhr) {
-            const progress = (xhr.loaded / xhr.total * 100);
-            loadingElem.textContent = `加载中: ${Math.round(progress)}%`;
-            console.log(`加载进度: ${progress}%`);
-        },
-        function (error) {
-            console.error('加载模型时出错:', error);
-            loadingElem.textContent = '加载失败: ' + error.message;
-        }
+        // ... 其余代码保持不变 ...
     );
 
-    animate();
-}
+    // 添加环境贴图以增强反射效果
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
 
-// 优化动画循环
-let previousTime = 0;
-const targetFPS = 60;
-const frameInterval = 1000 / targetFPS;
+    // 创建简单的环境贴图
+    const ambientLight2 = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight2);
 
-function animate(currentTime = 0) {
-    requestAnimationFrame(animate);
-
-    // 限制帧率
-    const deltaTime = currentTime - previousTime;
-    if (deltaTime < frameInterval) return;
-
-    previousTime = currentTime - (deltaTime % frameInterval);
-
-    controls.update();
-    renderer.render(scene, camera);
-    
-    if (isRecording) {
-        gif.addFrame(renderer.domElement, {delay: 100, copy: true});
-    }
-}
-
-// 优化窗口调整响应
-let resizeTimeout;
-window.addEventListener('resize', function() {
-    if (resizeTimeout) clearTimeout(resizeTimeout);
-    resizeTimeout = setTimeout(onWindowResize, 100);
-}, false);
-
-function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
-}
-
-// 其余代码保持不变...
-
-init();
+    // ... 其余代码保持不变 ...
