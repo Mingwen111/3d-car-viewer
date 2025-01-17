@@ -144,24 +144,26 @@ function setDefaultView(cameraZ, center, size) {
     controls.update();
 }
 
-// 自定义缓动函数，实现开始加速、中间匀速、结束减速的效果
+// 自定义缓动函数，实现平滑的加速和减速
 function customEasing(x) {
-    // 前100ms加速（0-0.05）
-    if (x < 0.05) {
-        // 使用二次方曲线实现加速
-        return (x / 0.05) * (x / 0.05) * 0.05;
+    // 前50ms加速（0-0.1）
+    if (x < 0.1) {
+        // 使用三次方曲线实现更平滑的加速
+        return Math.pow(x / 0.1, 3);
     }
-    // 后100ms减速（0.95-1.0）
-    if (x > 0.95) {
-        // 使用二次方曲线实现减速
-        const t = (1 - x) / 0.05;
-        return 1 - (t * t * 0.05);
+    // 后50ms减速（0.9-1.0）
+    if (x > 0.9) {
+        // 使用三次方曲线实现更平滑的减速
+        const t = (1 - x) / 0.1;
+        return 1 - Math.pow(t, 3);
     }
-    // 中间1800ms匀速（0.05-0.95）
-    return x;
+    // 中间400ms线性插值（0.1-0.9）
+    // 使用余弦插值使过渡更平滑
+    const t = (x - 0.1) / 0.8;
+    return 0.1 + t * 0.8;
 }
 
-function animateCamera(targetPosition, targetLookAt, duration = 2000) {
+function animateCamera(targetPosition, targetLookAt, duration = 500) { // 改为500ms
     const startPosition = camera.position.clone();
     const startRotation = camera.quaternion.clone();
     
@@ -178,6 +180,7 @@ function animateCamera(targetPosition, targetLookAt, duration = 2000) {
         const progress = Math.min(elapsed / duration, 1);
         const easeProgress = customEasing(progress);
 
+        // 使用球面插值使旋转更平滑
         camera.position.lerpVectors(startPosition, targetPosition, easeProgress);
         camera.quaternion.slerpQuaternions(startRotation, targetRotation, easeProgress);
 
