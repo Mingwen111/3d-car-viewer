@@ -9,12 +9,8 @@ let gif;
 function init() {
     // 创建场景
     scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000000); // 设置黑色背景
     
-    // 创建渐变背景
-    const gradient = new THREE.Texture(generateGradientTexture());
-    gradient.needsUpdate = true;
-    scene.background = gradient;
-
     // 创建相机
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.z = 5;
@@ -30,9 +26,9 @@ function init() {
     });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.5; // 增加曝光度
+    renderer.toneMappingExposure = 1.5;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -135,23 +131,7 @@ function init() {
     pmremGenerator.compileEquirectangularShader();
 
     animate();
-}
-
-// 生成渐变背景纹理
-function generateGradientTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 2;
-    canvas.height = 2;
-
-    const context = canvas.getContext('2d');
-    const gradient = context.createRadialGradient(1, 1, 0, 1, 1, 1);
-    gradient.addColorStop(0, '#1a1a1a');
-    gradient.addColorStop(1, '#000000');
-
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, 2, 2);
-
-    return canvas;
+    setupViewControls();
 }
 
 // 视角控制函数
@@ -162,46 +142,125 @@ function setDefaultView(cameraZ, center, size) {
 }
 
 function setTopView(size) {
-    const y = Math.max(size.x, size.z) * 2;
+    const y = Math.max(size.x, size.z) * 1.5;
     camera.position.set(0, y, 0);
+    camera.up.set(0, 0, -1); // 确保相机方向正确
     controls.target.set(0, 0, 0);
+    camera.lookAt(0, 0, 0);
     controls.update();
 }
 
 function setSideView(size) {
-    const z = Math.max(size.x, size.y) * 2;
-    camera.position.set(0, size.y / 2, z);
-    controls.target.set(0, size.y / 2, 0);
+    const z = Math.max(size.x, size.y) * 1.5;
+    camera.position.set(0, size.y * 0.5, z);
+    camera.up.set(0, 1, 0);
+    controls.target.set(0, size.y * 0.5, 0);
+    camera.lookAt(0, size.y * 0.5, 0);
     controls.update();
 }
 
 function setDriverView(size) {
-    // 假设驾驶位置在车辆前部偏左
-    camera.position.set(-size.x * 0.3, size.y * 0.8, -size.z * 0.1);
-    controls.target.set(size.x * 0.5, size.y * 0.7, -size.z * 2);
+    camera.position.set(-size.x * 0.3, size.y * 0.8, size.z * 0.1);
+    camera.up.set(0, 1, 0);
+    controls.target.set(size.x * 0.5, size.y * 0.7, -size.z);
+    camera.lookAt(size.x * 0.5, size.y * 0.7, -size.z);
     controls.update();
 }
 
-// 添加视角切换事件监听器
-document.getElementById('topView').addEventListener('click', function() {
-    if (model) {
-        const size = new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3());
-        setTopView(size);
+// 修改视角切换事件监听器
+function setupViewControls() {
+    document.getElementById('topView').addEventListener('click', function() {
+        if (model) {
+            const box = new THREE.Box3().setFromObject(model);
+            const size = box.getSize(new THREE.Vector3());
+            setTopView(size);
+        }
+    });
+
+    document.getElementById('sideView').addEventListener('click', function() {
+        if (model) {
+            const box = new THREE.Box3().setFromObject(model);
+            const size = box.getSize(new THREE.Vector3());
+            setSideView(size);
+        }
+    });
+
+    document.getElementById('driverView').addEventListener('click', function() {
+        if (model) {
+            const box = new THREE.Box3().setFromObject(model);
+            const size = box.getSize(new THREE.Vector3());
+            setDriverView(size);
+        }
+    });
+}
+
+// 优化动画循环
+let previousTime = 0;
+const targetFPS = 60;
+const frameInterval = 1000 / targetFPS;
+
+function animate(currentTime = 0) {
+    requestAnimationFrame(animate);
+
+    // 限制帧率
+    const deltaTime = currentTime - previousTime;
+    if (deltaTime < frameInterval) return;
+
+    previousTime = currentTime - (deltaTime % frameInterval);
+
+    controls.update();
+    renderer.render(scene, camera);
+    
+    if (isRecording) {
+        gif.addFrame(renderer.domElement, {delay: 100, copy: true});
     }
+}
+
+// 优化窗口调整响应
+let resizeTimeout;
+window.addEventListener('resize', function() {
+    if (resizeTimeout) clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(onWindowResize, 100);
+}, false);
+
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+}
+
+// 截图功能
+document.getElementById('screenshot').addEventListener('click', function() {
+    const link = document.createElement('a');
+    link.download = 'car-screenshot.png';
+    link.href = renderer.domElement.toDataURL('image/png');
+    link.click();
 });
 
-document.getElementById('sideView').addEventListener('click', function() {
-    if (model) {
-        const size = new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3());
-        setSideView(size);
-    }
+// GIF录制功能
+document.getElementById('recordGif').addEventListener('click', function() {
+    gif = new GIF({
+        workers: 2,
+        quality: 10,
+        width: window.innerWidth,
+        height: window.innerHeight
+    });
+    
+    isRecording = true;
 });
 
-document.getElementById('driverView').addEventListener('click', function() {
-    if (model) {
-        const size = new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3());
-        setDriverView(size);
-    }
+document.getElementById('stopGif').addEventListener('click', function() {
+    isRecording = false;
+    
+    gif.on('finished', function(blob) {
+        const link = document.createElement('a');
+        link.download = 'car-animation.gif';
+        link.href = URL.createObjectURL(blob);
+        link.click();
+    });
+    
+    gif.render();
 });
 
-// ... 其余代码保持不变 ...
+init();
